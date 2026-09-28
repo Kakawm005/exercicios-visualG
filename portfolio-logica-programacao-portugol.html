@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portfólio Portugol — Kayque Silva Pimentel</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#16181d;--mut:#5b6472;--line:#dfe3e9;--acc:#2f6df6;--code:#0f1420;--codeink:#d6e2ff}
+:root:not([data-theme="light"]){@media (prefers-color-scheme:dark){--bg:#0d1017;--panel:#151a23;--ink:#e8ecf3;--mut:#98a2b3;--line:#242c39;--acc:#6f9bff;--code:#0a0e16;--codeink:#d6e2ff}}
+:root[data-theme="dark"]{--bg:#0d1017;--panel:#151a23;--ink:#e8ecf3;--mut:#98a2b3;--line:#242c39;--acc:#6f9bff;--code:#0a0e16;--codeink:#d6e2ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,system-ui,"Segoe UI",Arial,sans-serif}
+header{padding:22px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{margin:0;font-size:19px}header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+.wrap{display:flex;gap:18px;padding:18px;max-width:1200px;margin:0 auto;align-items:flex-start;flex-wrap:wrap}
+aside{flex:1 1 260px;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;max-height:80vh;overflow:auto}
+main{flex:3 1 480px;min-width:300px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;padding:8px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;cursor:pointer;font-size:13px}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+ul{list-style:none;margin:0;padding:0}
+li{padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--mut)}
+li:hover{background:var(--bg)}li.on{background:var(--acc);color:#fff}
+.grp{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin:12px 0 4px;padding:0 9px;border-top:1px solid var(--line);padding-top:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.tag{display:inline-block;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);padding:2px 7px;border-radius:99px}
+h2{font-size:17px;margin:10px 0 6px}
+.stm{color:var(--mut);font-size:14px}
+textarea{width:100%;background:var(--code);color:var(--codeink);border:1px solid var(--line);border-radius:8px;padding:12px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+#code{min-height:280px}#stdin{min-height:70px}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+button.act{padding:9px 16px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;font-size:14px}
+button.run{background:var(--acc);color:#fff;border-color:var(--acc)}
+pre{background:var(--code);color:var(--codeink);padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;min-height:60px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;margin:0}
+footer{text-align:center;color:var(--mut);font-size:12px;padding:24px}
+</style></head><body>
+<header><h1>Portfólio — Lógica de Programação em Portugol (VisuAlg)</h1>
+<p>Kayque Silva Pimentel · exercícios resolvidos com mini IDE integrada</p></header>
+<div class="wrap">
+<aside>
+<div class="tabs"><button id="tM" class="on" onclick="setSec('manzano')">Manzano</button><button id="tF" onclick="setSec('faccat')">Faccat</button></div>
+<ul id="list"></ul>
+</aside>
+<main>
+<div class="card"><span class="tag" id="src"></span><h2 id="ttl"></h2><p class="stm" id="stm"></p></div>
+<div class="card">
+<label>Código Portugol (editável)</label><textarea id="code" spellcheck="false"></textarea>
+<label>Entrada — um valor por linha (usada pelos comandos <code>leia</code>)</label><textarea id="stdin" spellcheck="false"></textarea>
+<div class="row"><button class="act run" onclick="exec()">▶ Executar</button><button class="act" onclick="load(idx)">↺ Restaurar</button><button class="act" onclick="go(-1)">← Anterior</button><button class="act" onclick="go(1)">Próximo →</button></div>
+<label>Saída</label><pre id="out">—</pre>
+</div>
+</main></div>
+<footer>Kayque Silva Pimentel · Interpretador Portugol escrito em JavaScript</footer>
+<script>
+/* ---------- INTERPRETADOR PORTUGOL ---------- */
+function tok(s){const r=/\s*("[^"]*"|<-|:=|<=|>=|<>|\d+\.\d+|\d+|[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ_0-9]*|[-+*\/^(),<>=%:\[\]])/gy;let t=[],m;r.lastIndex=0;while(r.lastIndex<s.length){m=r.exec(s);if(!m)throw"Caractere inválido em: "+s.slice(r.lastIndex);t.push(m[1]);}return t;}
+function Ev(t,V){let i=0;
+ const pk=()=>t[i],ea=v=>{if((t[i]||'').toLowerCase()!==v)throw"Esperado '"+v+"'";i++;};
+ function pri(){let x=t[i++];if(x===undefined)throw"Expressão incompleta";
+  if(x==='(' ){let v=or();ea(')');return v;}
+  if(x==='-')return -pri();
+  if(/^"/.test(x))return x.slice(1,-1);
+  if(/^\d/.test(x))return parseFloat(x);
+  const k=x.toLowerCase();
+  if(k==='nao')return !pri();
+  if(k==='verdadeiro')return true;if(k==='falso')return false;if(k==='pi')return Math.PI;
+  if(t[i]==='('){i++;let a=[];if(t[i]!==')'){a.push(or());while(t[i]===','){i++;a.push(or());}}ea(')');
+   const F={raizq:Math.sqrt,abs:Math.abs,int:Math.trunc,sen:Math.sin,cos:Math.cos,tan:Math.tan,exp:(b,e)=>Math.pow(b,e),quad:x=>x*x};
+   if(!F[k])throw"Função desconhecida: "+x;return F[k](...a);}
+  if(t[i]==='['){i++;let idx=or();ea(']');if(!(k in V))throw"Vetor não declarado: "+x;
+   const arr=V[k];if(!Array.isArray(arr))throw x+" não é um vetor";return arr[Math.trunc(idx)];}
+  if(!(k in V))throw"Variável não declarada: "+x;return V[k];}
+ function pw(){let a=pri();while(t[i]==='^'){i++;a=Math.pow(a,pri());}return a;}
+ function mu(){let a=pw();for(;;){let o=(t[i]||'').toLowerCase();if(o==='*'||o==='/'){i++;let b=pw();a=o==='*'?a*b:a/b;}else if(o==='div'){i++;a=Math.trunc(a/pw());}else if(o==='mod'||o==='%'){i++;a=a%pw();}else return a;}}
+ function ad(){let a=mu();for(;;){let o=t[i];if(o==='+'||o==='-'){i++;let b=mu();a=o==='+'?(typeof a==='string'||typeof b==='string'?String(a)+String(b):a+b):a-b;}else return a;}}
+ function cp(){let a=ad();let o=t[i];if(['=','<','>','<=','>=','<>'].includes(o)){i++;let b=ad();return o==='='?a===b:o==='<>'?a!==b:o==='<'?a<b:o==='>'?a>b:o==='<='?a<=b:a>=b;}return a;}
+ function an(){let a=cp();while((t[i]||'').toLowerCase()==='e'){i++;a=a&&cp();}return a;}
+ function or(){let a=an();while((t[i]||'').toLowerCase()==='ou'){i++;a=a||an();}return a;}
+ let v=or();return v;}
+const ev=(s,V)=>Ev(tok(s),V);
+function split(s){let d=0,q=false,r=[],c='';for(const ch of s){if(ch==='"')q=!q;if(!q&&(ch==='('||ch==='['))d++;if(!q&&(ch===')'||ch===']'))d--;if(!q&&d===0&&ch===','){r.push(c);c='';}else c+=ch;}if(c.trim())r.push(c);return r;}
+function fmt(a,V){let d=0,q=false,base=a,dec=null;for(let j=0;j<a.length;j++){const ch=a[j];if(ch==='"')q=!q;if(!q&&ch==='(')d++;if(!q&&ch===')')d--;if(!q&&d===0&&ch===':'){base=a.slice(0,j);dec=a.slice(j+1).split(':').pop();break;}}
+ let v=ev(base,V);if(dec!==null&&typeof v==='number')return v.toFixed(parseInt(dec));
+ if(typeof v==='number')return Number.isInteger(v)?String(v):String(parseFloat(v.toFixed(6)));
+ if(typeof v==='boolean')return v?'VERDADEIRO':'FALSO';return String(v);}
+const OPEN=['se','enquanto','para','repita','escolha'],CLOSE=['fimse','fimenquanto','fimpara','ate','fimescolha'];
+function match(L,i){let d=0;for(let j=i;j<L.length;j++){const w=(L[j].split(/[\s(]/)[0]||'').toLowerCase();
+ if(OPEN.includes(w))d++;if(CLOSE.includes(w)){d--;if(d===0)return j;}}throw"Bloco sem fechamento na linha "+(i+1);}
+function elseAt(L,a,b){let d=0;for(let j=a;j<b;j++){const w=(L[j].split(/[\s(]/)[0]||'').toLowerCase();if(OPEN.includes(w))d++;if(CLOSE.includes(w))d--;if(d===1&&w==='senao')return j;}return -1;}
+function portugol(src,input){
+ const O=[];let steps=0;const IN=input.split('\n').filter(x=>x.trim()!=='' ).map(x=>x.trim());let ip=0;
+ let L=src.split('\n').map(l=>l.replace(/\/\/.*/,'').replace(/←/g,'<-').trim()).filter(l=>l!=='');
+ const V={};
+ const vi=L.findIndex(l=>/^var$/i.test(l)),si=L.findIndex(l=>/^inicio$/i.test(l));
+ if(vi>=0&&si>vi)for(const l of L.slice(vi+1,si)){const m=l.split(':');if(m.length<2)continue;const t=m.slice(1).join(':').trim();
+  const vm=t.match(/^vetor\s*\[\s*(\d+)\s*(?:\.\.\s*(\d+))?\s*\]\s*de\s*(\w+)/i);
+  m[0].split(',').forEach(n=>{n=n.trim().toLowerCase();if(!n)return;
+   if(vm){const hi=vm[2]?parseInt(vm[2]):parseInt(vm[1]);const tp=vm[3].toLowerCase();
+    const def=/caracter|literal/.test(tp)?'':/logico/.test(tp)?false:0;V[n]=new Array(hi+1).fill(def);}
+   else{const tt=t.toLowerCase();V[n]=/caracter|literal/.test(tt)?'':/logico/.test(tt)?false:0;}});}
+ let fi=L.findIndex(l=>/^fimalgoritmo$/i.test(l));
+ run(L.slice(si+1,fi<0?L.length:fi));
+ function run(B){for(let i=0;i<B.length;i++){if(++steps>400000)throw"Execução muito longa (possível laço infinito)";
+  const l=B[i],w=(l.split(/[\s(]/)[0]||'').toLowerCase();
+  if(w==='escreva'||w==='escreval'){const a=l.slice(l.indexOf('(')+1,l.lastIndexOf(')'));
+   O.push(a.trim()?split(a).map(x=>fmt(x.trim(),V)).join(''):'');if(w==='escreval')O.push('\n');continue;}
+  if(w==='leia'){const a=l.slice(l.indexOf('(')+1,l.lastIndexOf(')'));
+   split(a).forEach(n=>{n=n.trim();if(ip>=IN.length)throw"Faltam valores na caixa de Entrada";
+    const s=IN[ip++];const val=(s!==''&&!isNaN(Number(s.replace(',','.'))))?Number(s.replace(',','.')):s;
+    const am=n.match(/^([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ_0-9]*)\s*\[\s*(.+?)\s*\]$/);
+    if(am){const nm=am[1].toLowerCase();if(!Array.isArray(V[nm]))throw nm+" não é um vetor";V[nm][Math.trunc(ev(am[2],V))]=val;}
+    else V[n.toLowerCase()]=val;});continue;}
+  if(w==='se'){const e=match(B,i),cond=l.replace(/^se\s+/i,'').replace(/\s*entao\s*$/i,'');
+   const sp=elseAt(B,i,e);
+   if(ev(cond,V))run(B.slice(i+1,sp<0?e:sp));else if(sp>=0)run(B.slice(sp+1,e));
+   i=e;continue;}
+  if(w==='enquanto'){const e=match(B,i),c=l.replace(/^enquanto\s+/i,'').replace(/\s*faca\s*$/i,''),bd=B.slice(i+1,e);
+   while(ev(c,V)){run(bd);if(++steps>400000)throw"Laço infinito";}i=e;continue;}
+  if(w==='repita'){const e=match(B,i),bd=B.slice(i+1,e),c=B[e].replace(/^ate\s+/i,'');
+   do{run(bd);if(++steps>400000)throw"Laço infinito";}while(!ev(c,V));i=e;continue;}
+  if(w==='para'){const e=match(B,i),m=l.match(/^para\s+([A-Za-zÀ-ÿ_0-9]+)\s+de\s+(.+?)\s+ate\s+(.+?)(?:\s+passo\s+(.+?))?\s+faca$/i);
+   if(!m)throw"Sintaxe inválida em: "+l;const n=m[1].toLowerCase(),a=ev(m[2],V),b=ev(m[3],V),p=m[4]?ev(m[4],V):1,bd=B.slice(i+1,e);
+   for(V[n]=a;p>0?V[n]<=b:V[n]>=b;V[n]+=p){run(bd);if(++steps>400000)throw"Laço infinito";}i=e;continue;}
+  if(/^(algoritmo|var|inicio|fimalgoritmo)\b/i.test(l))continue;
+  const as=l.match(/^([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ_0-9]*)\s*(?:\[\s*(.+?)\s*\])?\s*(?:<-|:=)\s*(.+)$/);
+  if(as){const nm=as[1].toLowerCase();
+   if(as[2]!==undefined){if(!Array.isArray(V[nm]))throw nm+" não é um vetor";V[nm][Math.trunc(ev(as[2],V))]=ev(as[3],V);}
+   else V[nm]=ev(as[3],V);
+   continue;}
+  throw"Comando não reconhecido: "+l;}}
+ return O.join('');}
+/* ---------- EXERCÍCIOS ---------- */
+const EX={manzano:[
+{t:"L01A — Celsius para Fahrenheit",s:"Ler uma temperatura em graus Celsius e apresentá-la convertida em Fahrenheit. fahrenheit ← (9*celsius+160)/5.",i:"30",c:`algoritmo "L01A"
+var
+   celsius, fahrenheit: real
+inicio
+   Escreva("Temperatura em Celsius: ")
+   Leia(celsius)
+   fahrenheit <- (9 * celsius + 160) / 5
+   Escreval("Em Fahrenheit: ", fahrenheit:2)
+fimalgoritmo`},
+{t:"L01C — Volume de uma lata de óleo",s:"Calcular e apresentar o volume de uma lata cilíndrica: Volume ← PI * Raio² * Altura.",i:"5\n12",c:`algoritmo "L01C"
+var
+   raio, altura, volume: real
+inicio
+   Escreva("Raio (cm): ")
+   Leia(raio)
+   Escreva("Altura (cm): ")
+   Leia(altura)
+   volume <- pi * raio * raio * altura
+   Escreval("Volume da lata: ", volume:2, " cm3")
+fimalgoritmo`},
+{t:"L01D — Litros gastos em uma viagem",s:"Ler tempo e velocidade média, calcular a distância (tempo*velocidade) e os litros gastos (distância/12).",i:"3\n80",c:`algoritmo "L01D"
+var
+   tempo, velocidade, distancia, litros: real
+inicio
+   Escreva("Tempo gasto (h): ")
+   Leia(tempo)
+   Escreva("Velocidade media (km/h): ")
+   Leia(velocidade)
+   distancia <- tempo * velocidade
+   litros <- distancia / 12
+   Escreval("Velocidade media: ", velocidade:2, " km/h")
+   Escreval("Tempo gasto...: ", tempo:2, " h")
+   Escreval("Distancia.....: ", distancia:2, " km")
+   Escreval("Litros usados.: ", litros:2, " L")
+fimalgoritmo`},
+{t:"L01F — Troca de valores entre A e B",s:"Ler dois valores e trocar o conteúdo das variáveis, apresentando os valores trocados.",i:"10\n25",c:`algoritmo "L01F"
+var
+   valorA, valorB, auxiliar: real
+inicio
+   Escreva("Valor de valorA: ")
+   Leia(valorA)
+   Escreva("Valor de valorB: ")
+   Leia(valorB)
+   auxiliar <- valorA
+   valorA <- valorB
+   valorB <- auxiliar
+   Escreval("Agora valorA = ", valorA)
+   Escreval("Agora valorB = ", valorB)
+fimalgoritmo`},
+{t:"L01H — Volume de uma caixa retangular",s:"VOLUME ← COMPRIMENTO * LARGURA * ALTURA.",i:"4\n3\n2",c:`algoritmo "L01H"
+var
+   comprimento, largura, altura, volume: real
+inicio
+   Escreva("Comprimento: ")
+   Leia(comprimento)
+   Escreva("Largura: ")
+   Leia(largura)
+   Escreva("Altura: ")
+   Leia(altura)
+   volume <- comprimento * largura * altura
+   Escreval("Volume da caixa: ", volume:2)
+fimalgoritmo`},
+{t:"L01J — Conversão de dólar para real",s:"Ler a cotação do dólar e a quantidade de dólares, apresentando o valor em moeda brasileira.",i:"5.40\n200",c:`algoritmo "L01J"
+var
+   cotacao, dolares, reais: real
+inicio
+   Escreva("Cotacao do dolar: ")
+   Leia(cotacao)
+   Escreva("Quantidade de dolares: ")
+   Leia(dolares)
+   reais <- dolares * cotacao
+   Escreval("Valor em reais: R$ ", reais:2)
+fimalgoritmo`},
+{t:"L02C — Média de quatro notas (aprovado ≥ 5)",s:"Ler quatro notas, calcular a média e informar se o aluno foi aprovado.",i:"7\n5\n6\n4",c:`algoritmo "L02C"
+var
+   nota1, nota2, nota3, nota4, media: real
+inicio
+   Leia(nota1)
+   Leia(nota2)
+   Leia(nota3)
+   Leia(nota4)
+   media <- (nota1 + nota2 + nota3 + nota4) / 4
+   se media >= 5 entao
+      Escreval("Aluno APROVADO com media ", media:2)
+   senao
+      Escreval("Aluno REPROVADO com media ", media:2)
+   fimse
+fimalgoritmo`},
+{t:"L02E — Equação do 2º grau",s:"Ler coefA, coefB e coefC e calcular as duas raízes, validando coefA ≠ 0 e delta ≥ 0.",i:"1\n-5\n6",c:`algoritmo "L02E"
+var
+   coefA, coefB, coefC, delta, raiz1, raiz2: real
+inicio
+   Leia(coefA)
+   Leia(coefB)
+   Leia(coefC)
+   se coefA = 0 entao
+      Escreval("CoefA deve ser diferente de zero.")
+   senao
+      delta <- coefB * coefB - 4 * coefA * coefC
+      se delta < 0 entao
+         Escreval("Nao existem raizes reais.")
+      senao
+         raiz1 <- (-coefB + raizq(delta)) / (2 * coefA)
+         raiz2 <- (-coefB - raizq(delta)) / (2 * coefA)
+         Escreval("Raiz1 = ", raiz1:2)
+         Escreval("Raiz2 = ", raiz2:2)
+      fimse
+   fimse
+fimalgoritmo`},
+{t:"L02I — Número par ou ímpar",s:"Ler um número inteiro e informar se ele é par ou ímpar.",i:"17",c:`algoritmo "L02I"
+var
+   numero: inteiro
+inicio
+   Escreva("Numero: ")
+   Leia(numero)
+   se numero mod 2 = 0 entao
+      Escreval(numero, " e PAR")
+   senao
+      Escreval(numero, " e IMPAR")
+   fimse
+fimalgoritmo`},
+{t:"L03A — Tabuada (estrutura enquanto)",s:"Apresentar a tabuada de multiplicar de 1 até 10 de um número qualquer.",i:"7",c:`algoritmo "L03A"
+var
+   numero, contador: inteiro
+inicio
+   Escreva("Numero: ")
+   Leia(numero)
+   contador <- 1
+   enquanto contador <= 10 faca
+      Escreval(numero, " x ", contador, " = ", numero * contador)
+      contador <- contador + 1
+   fimenquanto
+fimalgoritmo`},
+{t:"L03G — Série de Fibonacci (15 termos)",s:"Apresentar a série de Fibonacci até o décimo quinto termo usando enquanto.",i:"",c:`algoritmo "L03G"
+var
+   anterior, atual, proximo, contador: inteiro
+inicio
+   anterior <- 1
+   atual <- 1
+   Escreva(anterior, " ", atual, " ")
+   contador <- 3
+   enquanto contador <= 15 faca
+      proximo <- anterior + atual
+      Escreva(proximo, " ")
+      anterior <- atual
+      atual <- proximo
+      contador <- contador + 1
+   fimenquanto
+   Escreval("")
+fimalgoritmo`},
+{t:"L04D — Grãos de trigo no tabuleiro (repita)",s:"Somatório dos grãos em 64 casas, dobrando a quantidade a cada casa.",i:"",c:`algoritmo "L04D"
+var
+   casa: inteiro
+   graos, total: real
+inicio
+   casa <- 1
+   graos <- 1
+   total <- 0
+   repita
+      total <- total + graos
+      graos <- graos * 2
+      casa <- casa + 1
+   ate casa > 64
+   Escreval("Total de graos: ", total)
+fimalgoritmo`},
+{t:"L04J — Divisão inteira sem usar DIV",s:"Apresentar o quociente inteiro de dois números usando apenas looping.",i:"47\n5",c:`algoritmo "L04J"
+var
+   dividendo, divisor, quociente, resto: inteiro
+inicio
+   Leia(dividendo)
+   Leia(divisor)
+   quociente <- 0
+   resto <- dividendo
+   repita
+      se resto >= divisor entao
+         resto <- resto - divisor
+         quociente <- quociente + 1
+      fimse
+   ate resto < divisor
+   Escreval("Quociente: ", quociente)
+   Escreval("Resto....: ", resto)
+fimalgoritmo`},
+{t:"L05K — Fatorial dos ímpares de 1 a 10 (para)",s:"Apresentar o valor do fatorial de cada valor ímpar na faixa de 1 a 10.",i:"",c:`algoritmo "L05K"
+var
+   contador, subContador: inteiro
+   fatorial: real
+inicio
+   para contador de 1 ate 10 passo 1 faca
+      se contador mod 2 <> 0 entao
+         fatorial <- 1
+         para subContador de 1 ate contador passo 1 faca
+            fatorial <- fatorial * subContador
+         fimpara
+         Escreval(contador, "! = ", fatorial)
+      fimse
+   fimpara
+fimalgoritmo`},
+{t:"Intro A — Produto e soma de quatro valores",s:"Ler A, B, C e D; apresentar o produto (P) do primeiro com o terceiro e a soma (S) do segundo com o quarto.",i:"2\n3\n4\n5",c:`algoritmo "IntroA"
+var
+   valorA, valorB, valorC, valorD, produto, soma: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   Leia(valorD)
+   produto <- valorA * valorC
+   soma <- valorB + valorD
+   Escreval("Produto = ", produto)
+   Escreval("Soma    = ", soma)
+fimalgoritmo`},
+{t:"Intro B — Reajuste de salário mensal",s:"Ler o salário mensal (SM) e o percentual de reajuste (PR); apresentar o novo salário (NS).",i:"3200\n12",c:`algoritmo "IntroB"
+var
+   salarioMensal, percentualReajuste, novoSalario: real
+inicio
+   Leia(salarioMensal)
+   Leia(percentualReajuste)
+   novoSalario <- salarioMensal + salarioMensal * percentualReajuste / 100
+   Escreval("Novo salario: R$ ", novoSalario:2)
+fimalgoritmo`},
+{t:"Intro C — Apuração de eleição sindical",s:"Ler votos de A, B e C, nulos e brancos; apresentar o total de eleitores e todos os percentuais em relação a esse total.",i:"120\n95\n60\n15\n10",c:`algoritmo "IntroC"
+var
+   votosA, votosB, votosC, nulos, brancos, total, validos: inteiro
+inicio
+   Leia(votosA)
+   Leia(votosB)
+   Leia(votosC)
+   Leia(nulos)
+   Leia(brancos)
+   validos <- votosA + votosB + votosC
+   total <- validos + nulos + brancos
+   Escreval("Total de eleitores: ", total)
+   Escreval("Validos.: ", validos * 100 / total:2, " %")
+   Escreval("Cand. A.: ", votosA * 100 / total:2, " %")
+   Escreval("Cand. B.: ", votosB * 100 / total:2, " %")
+   Escreval("Cand. C.: ", votosC * 100 / total:2, " %")
+   Escreval("Nulos...: ", nulos * 100 / total:2, " %")
+   Escreval("Brancos.: ", brancos * 100 / total:2, " %")
+fimalgoritmo`},
+{t:"L01B — Fahrenheit para Celsius",s:"Ler uma temperatura em Fahrenheit e convertê-la: celsius ← (fahrenheit - 32) * (5/9).",i:"86",c:`algoritmo "L01B"
+var
+   celsius, fahrenheit: real
+inicio
+   Escreva("Temperatura em Fahrenheit: ")
+   Leia(fahrenheit)
+   celsius <- (fahrenheit - 32) * (5 / 9)
+   Escreval("Em Celsius: ", celsius:2)
+fimalgoritmo`},
+{t:"L01E — Prestação em atraso",s:"PRESTACAO ← VALOR + (VALOR * TAXA/100) * TEMPO.",i:"800\n2\n5",c:`algoritmo "L01E"
+var
+   valor, taxa, tempo, prestacao: real
+inicio
+   Escreva("Valor da prestacao: ")
+   Leia(valor)
+   Escreva("Taxa (%) ao dia: ")
+   Leia(taxa)
+   Escreva("Dias de atraso: ")
+   Leia(tempo)
+   prestacao <- valor + (valor * taxa / 100) * tempo
+   Escreval("Valor a pagar: R$ ", prestacao:2)
+fimalgoritmo`},
+{t:"L01G — Propriedade distributiva (12 resultados)",s:"Ler valorA, valorB, valorC e valorD; somar e multiplicar cada par distinto, gerando seis adições e seis multiplicações.",i:"2\n3\n4\n5",c:`algoritmo "L01G"
+var
+   valorA, valorB, valorC, valorD: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   Leia(valorD)
+   Escreval("ValorA+valorB = ", valorA + valorB, "   valorA*valorB = ", valorA * valorB)
+   Escreval("ValorA+valorC = ", valorA + valorC, "   valorA*valorC = ", valorA * valorC)
+   Escreval("ValorA+valorD = ", valorA + valorD, "   valorA*valorD = ", valorA * valorD)
+   Escreval("ValorB+valorC = ", valorB + valorC, "   valorB*valorC = ", valorB * valorC)
+   Escreval("ValorB+valorD = ", valorB + valorD, "   valorB*valorD = ", valorB * valorD)
+   Escreval("ValorC+valorD = ", valorC + valorD, "   valorC*valorD = ", valorC * valorD)
+fimalgoritmo`},
+{t:"L01I — Quadrado da diferença",s:"Ler A e B e imprimir o quadrado da diferença do primeiro pelo segundo.",i:"9\n4",c:`algoritmo "L01I"
+var
+   valorA, valorB, resultado: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   resultado <- (valorA - valorB) * (valorA - valorB)
+   Escreval("Quadrado da diferenca: ", resultado)
+fimalgoritmo`},
+{t:"L01K — Conversão de real para dólar",s:"Ler a cotação do dólar e a quantidade de reais, apresentando o valor em moeda americana.",i:"5.40\n1080",c:`algoritmo "L01K"
+var
+   cotacao, reais, dolares: real
+inicio
+   Escreva("Cotacao do dolar: ")
+   Leia(cotacao)
+   Escreva("Quantidade de reais: ")
+   Leia(reais)
+   dolares <- reais / cotacao
+   Escreval("Valor em dolares: US$ ", dolares:2)
+fimalgoritmo`},
+{t:"L01L — Soma dos quadrados de três valores",s:"Ler valorA, valorB e valorC e apresentar a soma dos quadrados dos três valores.",i:"2\n3\n4",c:`algoritmo "L01L"
+var
+   valorA, valorB, valorC, resultado: real
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   resultado <- valorA * valorA + valorB * valorB + valorC * valorC
+   Escreval("Soma dos quadrados: ", resultado)
+fimalgoritmo`},
+{t:"L01M — Quadrado da soma de três valores",s:"Ler valorA, valorB e valorC e apresentar o quadrado da soma dos três valores.",i:"2\n3\n4",c:`algoritmo "L01M"
+var
+   valorA, valorB, valorC, resultado: real
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   resultado <- (valorA + valorB + valorC) * (valorA + valorB + valorC)
+   Escreval("Quadrado da soma: ", resultado)
+fimalgoritmo`},
+{t:"L02A — Diferença do maior pelo menor",s:"Ler dois valores inteiros e apresentar a diferença do maior pelo menor.",i:"8\n23",c:`algoritmo "L02A"
+var
+   valorA, valorB, diferenca: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   se valorA > valorB entao
+      diferenca <- valorA - valorB
+   senao
+      diferenca <- valorB - valorA
+   fimse
+   Escreval("Diferenca: ", diferenca)
+fimalgoritmo`},
+{t:"L02B — Módulo de um número",s:"Ler um valor inteiro positivo ou negativo e apresentá-lo como valor positivo.",i:"-42",c:`algoritmo "L02B"
+var
+   numero: inteiro
+inicio
+   Leia(numero)
+   se numero < 0 entao
+      numero <- numero * (-1)
+   fimse
+   Escreval("Modulo: ", numero)
+fimalgoritmo`},
+{t:"L02D — Média com exame (média ≥ 7 ou exame)",s:"Se a média das quatro notas for menor que 7, ler a nota de exame, obter nova média e aprovar se for ≥ 5.",i:"6\n7\n5\n6\n8",c:`algoritmo "L02D"
+var
+   nota1, nota2, nota3, nota4, media, exame: real
+inicio
+   Leia(nota1)
+   Leia(nota2)
+   Leia(nota3)
+   Leia(nota4)
+   media <- (nota1 + nota2 + nota3 + nota4) / 4
+   se media >= 7 entao
+      Escreval("APROVADO com media ", media:2)
+   senao
+      Escreva("Nota do exame: ")
+      Leia(exame)
+      media <- (media + exame) / 2
+      se media >= 5 entao
+         Escreval("APROVADO EM EXAME com media ", media:2)
+      senao
+         Escreval("REPROVADO com media ", media:2)
+      fimse
+   fimse
+fimalgoritmo`},
+{t:"L02F — Três valores em ordem crescente",s:"Ler valorA, valorB e valorC e apresentá-los dispostos em ordem crescente.",i:"12\n5\n9",c:`algoritmo "L02F"
+var
+   valorA, valorB, valorC, auxiliar: real
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   se valorA > valorB entao
+      auxiliar <- valorA
+      valorA <- valorB
+      valorB <- auxiliar
+   fimse
+   se valorB > valorC entao
+      auxiliar <- valorB
+      valorB <- valorC
+      valorC <- auxiliar
+   fimse
+   se valorA > valorB entao
+      auxiliar <- valorA
+      valorA <- valorB
+      valorB <- auxiliar
+   fimse
+   Escreval("Ordem crescente: ", valorA, " ", valorB, " ", valorC)
+fimalgoritmo`},
+{t:"L02G — Divisíveis por 2 e por 3",s:"Ler quatro números inteiros e apresentar os que são divisíveis por 2 e por 3.",i:"12\n7\n18\n9",c:`algoritmo "L02G"
+var
+   valorA, valorB, valorC, valorD: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   Leia(valorD)
+   se (valorA mod 2 = 0) e (valorA mod 3 = 0) entao
+      Escreval(valorA, " e divisivel por 2 e 3")
+   fimse
+   se (valorB mod 2 = 0) e (valorB mod 3 = 0) entao
+      Escreval(valorB, " e divisivel por 2 e 3")
+   fimse
+   se (valorC mod 2 = 0) e (valorC mod 3 = 0) entao
+      Escreval(valorC, " e divisivel por 2 e 3")
+   fimse
+   se (valorD mod 2 = 0) e (valorD mod 3 = 0) entao
+      Escreval(valorD, " e divisivel por 2 e 3")
+   fimse
+fimalgoritmo`},
+{t:"L02H — Maior e menor de cinco números",s:"Efetuar a leitura de cinco números inteiros e identificar o maior e o menor valores.",i:"14\n3\n27\n8\n19",c:`algoritmo "L02H"
+var
+   numero, maior, menor, contador: inteiro
+inicio
+   Leia(numero)
+   maior <- numero
+   menor <- numero
+   para contador de 2 ate 5 passo 1 faca
+      Leia(numero)
+      se numero > maior entao
+         maior <- numero
+      fimse
+      se numero < menor entao
+         menor <- numero
+      fimse
+   fimpara
+   Escreval("Maior: ", maior)
+   Escreval("Menor: ", menor)
+fimalgoritmo`},
+{t:"L02J — Faixa permitida de 1 a 9",s:"Ler um valor e indicar se ele está ou não na faixa permitida de 1 a 9.",i:"12",c:`algoritmo "L02J"
+var
+   numero: inteiro
+inicio
+   Escreva("Valor (1 a 9): ")
+   Leia(numero)
+   se (numero >= 1) e (numero <= 9) entao
+      Escreval("O valor esta na faixa permitida")
+   senao
+      Escreval("O valor esta fora da faixa permitida")
+   fimse
+fimalgoritmo`},
+{t:"L02K — Apresentar valor não maior que três",s:"Ler um valor inteiro e apresentá-lo caso não seja maior que três.",i:"2",c:`algoritmo "L02K"
+var
+   numero: inteiro
+inicio
+   Leia(numero)
+   se numero <= 3 entao
+      Escreval("Valor lido: ", numero)
+   fimse
+fimalgoritmo`},
+{t:"L02L — Saudação conforme o sexo",s:"Ler nome e sexo e apresentar 'Ilmo Sr.' ou 'Ilma Sra.' junto do nome informado.",i:"Kayque\nM",c:`algoritmo "L02L"
+var
+   nome, sexo: caracter
+inicio
+   Escreva("Nome: ")
+   Leia(nome)
+   Escreva("Sexo (M/F): ")
+   Leia(sexo)
+   se sexo = "M" entao
+      Escreval("Ilmo Sr. ", nome)
+   senao
+      Escreval("Ilma Sra. ", nome)
+   fimse
+fimalgoritmo`},
+{t:"L03B — Soma dos 100 primeiros inteiros",s:"Apresentar o total da soma obtida dos cem primeiros números inteiros, usando enquanto.",i:"",c:`algoritmo "L03B"
+var
+   contador, soma: inteiro
+inicio
+   contador <- 1
+   soma <- 0
+   enquanto contador <= 100 faca
+      soma <- soma + contador
+      contador <- contador + 1
+   fimenquanto
+   Escreval("Soma dos 100 primeiros numeros: ", soma)
+fimalgoritmo`},
+{t:"L03C — Somatório dos pares de 1 a 500",s:"Apresentar o somatório dos valores pares existentes na faixa de 1 a 500, usando enquanto.",i:"",c:`algoritmo "L03C"
+var
+   contador, soma: inteiro
+inicio
+   contador <- 1
+   soma <- 0
+   enquanto contador <= 500 faca
+      se contador mod 2 = 0 entao
+         soma <- soma + contador
+      fimse
+      contador <- contador + 1
+   fimenquanto
+   Escreval("Soma dos pares de 1 a 500: ", soma)
+fimalgoritmo`},
+{t:"L03D — Ímpares de 0 a 20",s:"Apresentar todos os valores inteiros ímpares situados na faixa de 0 a 20, usando enquanto.",i:"",c:`algoritmo "L03D"
+var
+   numero: inteiro
+inicio
+   numero <- 0
+   enquanto numero <= 20 faca
+      se numero mod 2 <> 0 entao
+         Escreva(numero, " ")
+      fimse
+      numero <- numero + 1
+   fimenquanto
+   Escreval("")
+fimalgoritmo`},
+{t:"L03E — Potências de 3 (expoente 0 a 15)",s:"Apresentar as potências de 3, do expoente 0 ao 15, sem usar o operador ^, usando enquanto.",i:"",c:`algoritmo "L03E"
+var
+   expoente, multiplicador, potencia: inteiro
+inicio
+   expoente <- 0
+   enquanto expoente <= 15 faca
+      potencia <- 1
+      multiplicador <- 1
+      enquanto multiplicador <= expoente faca
+         potencia <- potencia * 3
+         multiplicador <- multiplicador + 1
+      fimenquanto
+      Escreval("3^", expoente, " = ", potencia)
+      expoente <- expoente + 1
+   fimenquanto
+fimalgoritmo`},
+{t:"L03F — Potência de base e expoente quaisquer",s:"Apresentar o valor de B elevado a E sem usar o operador ^, usando enquanto.",i:"2\n10",c:`algoritmo "L03F"
+var
+   base, expoente, contador, potencia: real
+inicio
+   Escreva("Base: ")
+   Leia(base)
+   Escreva("Expoente: ")
+   Leia(expoente)
+   potencia <- 1
+   contador <- 1
+   enquanto contador <= expoente faca
+      potencia <- potencia * base
+      contador <- contador + 1
+   fimenquanto
+   Escreval(base, "^", expoente, " = ", potencia)
+fimalgoritmo`},
+{t:"L03H — Celsius em Fahrenheit de 10 em 10",s:"Apresentar a conversão de Celsius em Fahrenheit de 10 em 10 graus, de 10 até 100, usando enquanto.",i:"",c:`algoritmo "L03H"
+var
+   celsius: inteiro
+   fahrenheit: real
+inicio
+   celsius <- 10
+   enquanto celsius <= 100 faca
+      fahrenheit <- (9 * celsius + 160) / 5
+      Escreval("Celsius=", celsius, "  fahrenheit=", fahrenheit:2)
+      celsius <- celsius + 10
+   fimenquanto
+fimalgoritmo`},
+{t:"L03I — Soma e média de 10 valores",s:"Ler 10 valores numéricos e apresentar o somatório e a média aritmética, usando enquanto.",i:"4\n8\n2\n9\n5\n7\n1\n6\n3\n10",c:`algoritmo "L03I"
+var
+   contador: inteiro
+   valor, soma, media: real
+inicio
+   soma <- 0
+   contador <- 1
+   enquanto contador <= 10 faca
+      Leia(valor)
+      soma <- soma + valor
+      contador <- contador + 1
+   fimenquanto
+   media <- soma / 10
+   Escreval("Soma..: ", soma)
+   Escreval("Media.: ", media:2)
+fimalgoritmo`},
+{t:"L03J — Soma e média dos pares de 50 a 70",s:"Apresentar os resultados da soma e da média aritmética dos valores pares na faixa de 50 a 70, usando enquanto.",i:"",c:`algoritmo "L03J"
+var
+   numero, soma, quantidade: inteiro
+   media: real
+inicio
+   soma <- 0
+   quantidade <- 0
+   numero <- 50
+   enquanto numero <= 70 faca
+      se numero mod 2 = 0 entao
+         soma <- soma + numero
+         quantidade <- quantidade + 1
+      fimse
+      numero <- numero + 1
+   fimenquanto
+   media <- soma / quantidade
+   Escreval("Soma..: ", soma)
+   Escreval("Media.: ", media:2)
+fimalgoritmo`},
+{t:"L03K — Área total de uma residência",s:"Ler nome, largura e comprimento de cada cômodo e acumular a área total até o usuário responder NAO.",i:"Sala\n4\n5\nS\nCozinha\n3\n3\nN",c:`algoritmo "L03K"
+var
+   nome, continuar: caracter
+   largura, comprimento, area, total: real
+inicio
+   total <- 0
+   continuar <- "S"
+   enquanto continuar = "S" faca
+      Escreva("Nome do comodo: ")
+      Leia(nome)
+      Escreva("Largura: ")
+      Leia(largura)
+      Escreva("Comprimento: ")
+      Leia(comprimento)
+      area <- largura * comprimento
+      total <- total + area
+      Escreval(nome, " - area: ", area:2)
+      Escreva("Continuar (S/N)? ")
+      Leia(continuar)
+   fimenquanto
+   Escreval("Area total da residencia: ", total:2)
+fimalgoritmo`},
+{t:"L03L — Maior e menor até valor negativo",s:"Ler valores positivos até que um valor negativo seja informado e apresentar o maior e o menor lidos.",i:"5\n12\n3\n9\n-1",c:`algoritmo "L03L"
+var
+   valor, maior, menor: real
+   primeiro: logico
+inicio
+   maior <- 0
+   menor <- 0
+   primeiro <- verdadeiro
+   Leia(valor)
+   enquanto valor >= 0 faca
+      se primeiro entao
+         maior <- valor
+         menor <- valor
+         primeiro <- falso
+      senao
+         se valor > maior entao
+            maior <- valor
+         fimse
+         se valor < menor entao
+            menor <- valor
+         fimse
+      fimse
+      Leia(valor)
+   fimenquanto
+   Escreval("Maior: ", maior)
+   Escreval("Menor: ", menor)
+fimalgoritmo`},
+{t:"L04A — Quadrados de 15 a 200",s:"Apresentar os quadrados dos números inteiros de 15 a 200, usando repita.",i:"",c:`algoritmo "L04A"
+var
+   numero: inteiro
+inicio
+   numero <- 15
+   repita
+      Escreval(numero, "^2 = ", numero * numero)
+      numero <- numero + 1
+   ate numero > 200
+fimalgoritmo`},
+{t:"L04B — Somatório dos pares de 1 a 500",s:"Apresentar o somatório dos valores pares existentes na faixa de 1 a 500, usando repita.",i:"",c:`algoritmo "L04B"
+var
+   numero, soma: inteiro
+inicio
+   numero <- 1
+   soma <- 0
+   repita
+      se numero mod 2 = 0 entao
+         soma <- soma + numero
+      fimse
+      numero <- numero + 1
+   ate numero > 500
+   Escreval("Soma dos pares: ", soma)
+fimalgoritmo`},
+{t:"L04C — Divisíveis por 4 menores que 200",s:"Apresentar todos os números divisíveis por 4 que sejam menores que 200, usando repita.",i:"",c:`algoritmo "L04C"
+var
+   numero: inteiro
+inicio
+   numero <- 1
+   repita
+      se numero mod 4 = 0 entao
+         Escreva(numero, " ")
+      fimse
+      numero <- numero + 1
+   ate numero >= 200
+   Escreval("")
+fimalgoritmo`},
+{t:"L04E — Somatório do fatorial de 15 valores",s:"Ler 15 valores numéricos inteiros e apresentar o somatório do fatorial de cada valor lido, usando repita.",i:"1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15",c:`algoritmo "L04E"
+var
+   contador, subContador, valorLido: inteiro
+   fat, soma: real
+inicio
+   soma <- 0
+   contador <- 1
+   repita
+      Leia(valorLido)
+      fat <- 1
+      subContador <- 1
+      repita
+         fat <- fat * subContador
+         subContador <- subContador + 1
+      ate subContador > valorLido
+      soma <- soma + fat
+      contador <- contador + 1
+   ate contador > 15
+   Escreval("Soma dos fatoriais: ", soma)
+fimalgoritmo`},
+{t:"L04F — Soma e média até valor negativo",s:"Ler valores sucessivos enquanto forem positivos e apresentar o somatório, a média e o total de valores lidos, usando repita.",i:"5\n3\n8\n-1",c:`algoritmo "L04F"
+var
+   valor, soma, quantidade, media: real
+inicio
+   soma <- 0
+   quantidade <- 0
+   Leia(valor)
+   repita
+      se valor >= 0 entao
+         soma <- soma + valor
+         quantidade <- quantidade + 1
+         Leia(valor)
+      fimse
+   ate valor < 0
+   se quantidade > 0 entao
+      Escreval("Soma......: ", soma)
+      Escreval("Quantidade: ", quantidade)
+      media <- soma / quantidade
+      Escreval("Media.....: ", media:2)
+   senao
+      Escreval("Nenhum valor positivo informado.")
+   fimse
+fimalgoritmo`},
+{t:"L04G — Fatorial dos ímpares de 1 a 10",s:"Apresentar o valor do fatorial dos valores ímpares situados na faixa de 1 a 10, usando repita.",i:"",c:`algoritmo "L04G"
+var
+   numero, subContador, fat: inteiro
+inicio
+   numero <- 1
+   repita
+      se numero mod 2 <> 0 entao
+         fat <- 1
+         subContador <- 1
+         repita
+            fat <- fat * subContador
+            subContador <- subContador + 1
+         ate subContador > numero
+         Escreval(numero, "! = ", fat)
+      fimse
+      numero <- numero + 1
+   ate numero > 10
+fimalgoritmo`},
+{t:"L04H — Área total de uma residência (repita)",s:"Ler nome, largura e comprimento de cada cômodo e acumular a área total até o usuário responder NAO, usando repita.",i:"Sala\n4\n5\nS\nCozinha\n3\n3\nN",c:`algoritmo "L04H"
+var
+   nome, continuar: caracter
+   largura, comprimento, area, total: real
+inicio
+   total <- 0
+   repita
+      Escreva("Nome do comodo: ")
+      Leia(nome)
+      Escreva("Largura: ")
+      Leia(largura)
+      Escreva("Comprimento: ")
+      Leia(comprimento)
+      area <- largura * comprimento
+      total <- total + area
+      Escreval(nome, " - area: ", area:2)
+      Escreva("Continuar (S/N)? ")
+      Leia(continuar)
+   ate continuar = "N"
+   Escreval("Area total da residencia: ", total:2)
+fimalgoritmo`},
+{t:"L04I — Maior e menor até valor negativo (repita)",s:"Ler valores positivos até que um valor negativo seja informado e apresentar o maior e o menor lidos, usando repita.",i:"5\n12\n3\n9\n-1",c:`algoritmo "L04I"
+var
+   valor, maior, menor: real
+   primeiro: logico
+inicio
+   primeiro <- verdadeiro
+   repita
+      Leia(valor)
+      se valor >= 0 entao
+         se primeiro entao
+            maior <- valor
+            menor <- valor
+            primeiro <- falso
+         senao
+            se valor > maior entao
+               maior <- valor
+            fimse
+            se valor < menor entao
+               menor <- valor
+            fimse
+         fimse
+      fimse
+   ate valor < 0
+   Escreval("Maior: ", maior)
+   Escreval("Menor: ", menor)
+fimalgoritmo`},
+{t:"L05A — Quadrados de 15 a 200 (para)",s:"Apresentar os quadrados dos números inteiros de 15 a 200, usando para.",i:"",c:`algoritmo "L05A"
+var
+   numero: inteiro
+inicio
+   para numero de 15 ate 200 passo 1 faca
+      Escreval(numero, "^2 = ", numero * numero)
+   fimpara
+fimalgoritmo`},
+{t:"L05B — Tabuada de um número (para)",s:"Apresentar os resultados da tabuada de multiplicar (de 1 até 10) de um número qualquer, usando para.",i:"7",c:`algoritmo "L05B"
+var
+   numero, multiplicador: inteiro
+inicio
+   Escreva("Numero: ")
+   Leia(numero)
+   para multiplicador de 1 ate 10 passo 1 faca
+      Escreval(numero, " x ", multiplicador, " = ", numero * multiplicador)
+   fimpara
+fimalgoritmo`},
+{t:"L05C — Soma dos 100 primeiros inteiros (para)",s:"Apresentar o total da soma obtida dos cem primeiros números inteiros, usando para.",i:"",c:`algoritmo "L05C"
+var
+   contador, soma: inteiro
+inicio
+   soma <- 0
+   para contador de 1 ate 100 passo 1 faca
+      soma <- soma + contador
+   fimpara
+   Escreval("Soma dos 100 primeiros numeros: ", soma)
+fimalgoritmo`},
+{t:"L05D — Somatório dos pares de 1 a 500 (para)",s:"Apresentar o somatório dos valores pares existentes na faixa de 1 a 500, usando para.",i:"",c:`algoritmo "L05D"
+var
+   numero, soma: inteiro
+inicio
+   soma <- 0
+   para numero de 1 ate 500 passo 1 faca
+      se numero mod 2 = 0 entao
+         soma <- soma + numero
+      fimse
+   fimpara
+   Escreval("Soma dos pares: ", soma)
+fimalgoritmo`},
+{t:"L05E — Ímpares de 0 a 20 (para)",s:"Apresentar todos os valores inteiros ímpares situados na faixa de 0 a 20, usando para.",i:"",c:`algoritmo "L05E"
+var
+   numero: inteiro
+inicio
+   para numero de 0 ate 20 passo 1 faca
+      se numero mod 2 <> 0 entao
+         Escreva(numero, " ")
+      fimse
+   fimpara
+   Escreval("")
+fimalgoritmo`},
+{t:"L05F — Divisíveis por 4 menores que 200 (para)",s:"Apresentar todos os números divisíveis por 4 que sejam menores que 200, usando para.",i:"",c:`algoritmo "L05F"
+var
+   numero: inteiro
+inicio
+   para numero de 1 ate 199 passo 1 faca
+      se numero mod 4 = 0 entao
+         Escreva(numero, " ")
+      fimse
+   fimpara
+   Escreval("")
+fimalgoritmo`},
+{t:"L05G — Potências de 3 (para)",s:"Apresentar as potências de 3, do expoente 0 ao 15, sem usar o operador ^, usando para.",i:"",c:`algoritmo "L05G"
+var
+   expoente, multiplicador, potencia: inteiro
+inicio
+   para expoente de 0 ate 15 passo 1 faca
+      potencia <- 1
+      para multiplicador de 1 ate expoente passo 1 faca
+         potencia <- potencia * 3
+      fimpara
+      Escreval("3^", expoente, " = ", potencia)
+   fimpara
+fimalgoritmo`},
+{t:"L05H — Potência de base e expoente quaisquer (para)",s:"Apresentar o valor de B elevado a E sem usar o operador ^, usando para.",i:"2\n10",c:`algoritmo "L05H"
+var
+   base, expoente, contador, potencia: real
+inicio
+   Escreva("Base: ")
+   Leia(base)
+   Escreva("Expoente: ")
+   Leia(expoente)
+   potencia <- 1
+   para contador de 1 ate expoente passo 1 faca
+      potencia <- potencia * base
+   fimpara
+   Escreval(base, "^", expoente, " = ", potencia)
+fimalgoritmo`},
+{t:"L05I — Série de Fibonacci (para)",s:"Apresentar a série de Fibonacci até o décimo quinto termo, usando para.",i:"",c:`algoritmo "L05I"
+var
+   anterior, atual, proximo, contador: inteiro
+inicio
+   anterior <- 1
+   atual <- 1
+   Escreva(anterior, " ", atual, " ")
+   para contador de 3 ate 15 passo 1 faca
+      proximo <- anterior + atual
+      Escreva(proximo, " ")
+      anterior <- atual
+      atual <- proximo
+   fimpara
+   Escreval("")
+fimalgoritmo`},
+{t:"L05J — Celsius em Fahrenheit de 10 em 10 (para)",s:"Apresentar a conversão de Celsius em Fahrenheit de 10 em 10 graus, de 10 até 100, usando para.",i:"",c:`algoritmo "L05J"
+var
+   celsius: inteiro
+   fahrenheit: real
+inicio
+   para celsius de 10 ate 100 passo 10 faca
+      fahrenheit <- (9 * celsius + 160) / 5
+      Escreval("Celsius=", celsius, "  fahrenheit=", fahrenheit:2)
+   fimpara
+fimalgoritmo`}],
+faccat:[
+{t:"Ex. 5 — Antecessor de um número",s:"Ler um valor e escrever o seu antecessor.",i:"90",c:`algoritmo "Ex05"
+var
+   numero: inteiro
+inicio
+   Escreva("Valor: ")
+   Leia(numero)
+   Escreval("Antecessor: ", numero - 1)
+fimalgoritmo`},
+{t:"Ex. 6 — Área do retângulo",s:"Ler base e altura de um retângulo, calcular e escrever a área.",i:"8\n3",c:`algoritmo "Ex06"
+var
+   base, altura, area: real
+inicio
+   Leia(base)
+   Leia(altura)
+   area <- base * altura
+   Escreval("Area do retangulo: ", area:2)
+fimalgoritmo`},
+{t:"Ex. 7 — Idade em dias",s:"Ler a idade em anos, meses e dias e escrevê-la apenas em dias (ano = 365, mês = 30).",i:"20\n4\n12",c:`algoritmo "Ex07"
+var
+   anos, meses, dias, total: inteiro
+inicio
+   Leia(anos)
+   Leia(meses)
+   Leia(dias)
+   total <- anos * 365 + meses * 30 + dias
+   Escreval("Idade em dias: ", total)
+fimalgoritmo`},
+{t:"Ex. 8 — Percentual de votos",s:"Ler total de eleitores, votos brancos, nulos e válidos e calcular o percentual de cada um.",i:"1000\n50\n30\n920",c:`algoritmo "Ex08"
+var
+   total, brancos, nulos, validos: inteiro
+inicio
+   Leia(total)
+   Leia(brancos)
+   Leia(nulos)
+   Leia(validos)
+   Escreval("Brancos: ", (brancos * 100) / total:2, " %")
+   Escreval("Nulos..: ", (nulos * 100) / total:2, " %")
+   Escreval("Validos: ", (validos * 100) / total:2, " %")
+fimalgoritmo`},
+{t:"Ex. 9 — Reajuste de salário",s:"Ler o salário atual e o percentual de reajuste, escrevendo o novo salário.",i:"2500\n8",c:`algoritmo "Ex09"
+var
+   salario, percentual, novoSalario: real
+inicio
+   Leia(salario)
+   Leia(percentual)
+   novoSalario <- salario + salario * percentual / 100
+   Escreval("NovoSalario salario: R$ ", novoSalario:2)
+fimalgoritmo`},
+{t:"Ex. 10 — Custo final de um carro",s:"Custo ao consumidor = custo de fábrica + 28% (distribuidor) + 45% (impostos).",i:"50000",c:`algoritmo "Ex10"
+var
+   fabrica, distribuidor, impostos, custoFinal: real
+inicio
+   Escreva("Custo de fabrica: ")
+   Leia(fabrica)
+   distribuidor <- fabrica * 0.28
+   impostos <- fabrica * 0.45
+   custoFinal <- fabrica + distribuidor + impostos
+   Escreval("Distribuidor: R$ ", distribuidor:2)
+   Escreval("Impostos....: R$ ", impostos:2)
+   Escreval("Custo custoFinal.: R$ ", custoFinal:2)
+fimalgoritmo`},
+{t:"Ex. 11 — Salário do vendedor de carros",s:"Salário fixo + comissão por carro vendido + 5% do valor total das vendas.",i:"4\n120000\n1800\n200",c:`algoritmo "Ex11"
+var
+   carrosVendidos: inteiro
+   vendas, fixo, porCarro, salario: real
+inicio
+   Leia(carrosVendidos)
+   Leia(vendas)
+   Leia(fixo)
+   Leia(porCarro)
+   salario <- fixo + carrosVendidos * porCarro + vendas * 0.05
+   Escreval("Salario final: R$ ", salario:2)
+fimalgoritmo`},
+{t:"Ex. 13 — Média ponderada (pesos 2, 3 e 5)",s:"Ler três notas e calcular a média ponderada com pesos 2, 3 e 5.",i:"7\n8\n6",c:`algoritmo "Ex13"
+var
+   nota1, nota2, nota3, media: real
+inicio
+   Leia(nota1)
+   Leia(nota2)
+   Leia(nota3)
+   media <- (nota1 * 2 + nota2 * 3 + nota3 * 5) / 10
+   Escreval("Media final: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 16 — Preço das maçãs",s:"R$ 1,30 cada se comprar menos de uma dúzia; R$ 1,00 se comprar 12 ou mais.",i:"15",c:`algoritmo "Ex16"
+var
+   quantidade: inteiro
+   total: real
+inicio
+   Escreva("Quantidade de macas: ")
+   Leia(quantidade)
+   se quantidade < 12 entao
+      total <- quantidade * 1.30
+   senao
+      total <- quantidade * 1.00
+   fimse
+   Escreval("Custo total: R$ ", total:2)
+fimalgoritmo`},
+{t:"Ex. 22 — Hora extra com 50% de acréscimo",s:"Jornada de 40h semanais (160h no mês); acima disso a hora vale 50% a mais.",i:"180\n25",c:`algoritmo "Ex22"
+var
+   horas, valorHora, salario, horasExtras: real
+inicio
+   Escreva("Horas trabalhadas no mes: ")
+   Leia(horas)
+   Escreva("Salario por hora: ")
+   Leia(valorHora)
+   se horas > 160 entao
+      horasExtras <- horas - 160
+      salario <- 160 * valorHora + horasExtras * valorHora * 1.5
+   senao
+      salario <- horas * valorHora
+   fimse
+   Escreval("Salario total: R$ ", salario:2)
+fimalgoritmo`},
+{t:"Ex. 23 — Peso ideal por sexo",s:"Masculino = (72,7 * altura) - 58; Feminino = (62,1 * altura) - 44,7.",i:"Kayque\n1.78\nM",c:`algoritmo "Ex23"
+var
+   nome, sexo: caracter
+   altura, peso: real
+inicio
+   Leia(nome)
+   Leia(altura)
+   Leia(sexo)
+   se sexo = "M" entao
+      peso <- 72.7 * altura - 58
+   senao
+      peso <- 62.1 * altura - 44.7
+   fimse
+   Escreval(nome, ", seu peso ideal e ", peso:2, " kg")
+fimalgoritmo`},
+{t:"Ex. 25 — Saldo atual da conta",s:"Saldo atual = saldo - débito + crédito; informar se é positivo ou negativo.",i:"12345\n800\n1000\n450",c:`algoritmo "Ex25"
+var
+   numeroConta: inteiro
+   saldo, debito, credito, saldoAtual: real
+inicio
+   Leia(numeroConta)
+   Leia(saldo)
+   Leia(debito)
+   Leia(credito)
+   saldoAtual <- saldo - debito + credito
+   Escreval("NumeroConta ", numeroConta, " - saldo saldoAtual: R$ ", saldoAtual:2)
+   se saldoAtual >= 0 entao
+      Escreval("Saldo POSITIVO")
+   senao
+      Escreval("Saldo NEGATIVO")
+   fimse
+fimalgoritmo`},
+{t:"Ex. 31 — Verificação de triângulo",s:"Ler ladoA, ladoB e ladoC e verificar se cada lado é menor que a soma dos outros dois.",i:"3\n4\n5",c:`algoritmo "Ex31"
+var
+   ladoA, ladoB, ladoC: real
+inicio
+   Leia(ladoA)
+   Leia(ladoB)
+   Leia(ladoC)
+   se (ladoA < ladoB + ladoC) e (ladoB < ladoA + ladoC) e (ladoC < ladoA + ladoB) entao
+      Escreval("Os valores FORMAM um triangulo.")
+   senao
+      Escreval("Os valores NAO formam um triangulo.")
+   fimse
+fimalgoritmo`},
+{t:"Ex. 3 — Comparação de expressões aritméticas",s:"Verificar se os pares de instruções produzem o mesmo resultado, avaliando a precedência de parênteses.",i:"",c:`algoritmo "Ex03"
+inicio
+   Escreval("A: (4/2)+(2/4) = ", (4/2)+(2/4), "   4/2+2/4 = ", 4/2+2/4)
+   Escreval("B: 4/(2+2)/4 = ", 4/(2+2)/4, "        4/2+2/4 = ", 4/2+2/4)
+   Escreval("C: (4+2)*2-4 = ", (4+2)*2-4, "    4+2*2-4 = ", 4+2*2-4)
+fimalgoritmo`},
+{t:"Ex. 4 — Mínimo de parênteses possível",s:"Reescrever as expressões dadas com o mínimo de parênteses, sem alterar o resultado.",i:"",c:`algoritmo "Ex04"
+inicio
+   Escreval("A) 6*(3+2) = ", 6*(3+2))
+   Escreval("B) 2+6*(3+2) = ", 2+6*(3+2))
+   Escreval("C) 2+3*6/(2+4) = ", 2+3*6/(2+4))
+   Escreval("D) 2*8/(3+1) = ", 2*8/(3+1))
+   Escreval("E) 3+(16-2)/(2*(9-2)) = ", 3+(16-2)/(2*(9-2)))
+   Escreval("F) 6/3+8/2 = ", 6/3+8/2)
+   Escreval("G) (3+8/2)*4+3*2 = ", (3+8/2)*4+3*2)
+   Escreval("H) 6*3*3+6-10 = ", 6*3*3+6-10)
+   Escreval("I) (10*8+3)*9 = ", (10*8+3)*9)
+   Escreval("J) (-12)*(-4)+3*(-4) = ", (-12)*(-4)+3*(-4))
+fimalgoritmo`},
+{t:"Ex. 12 — Fahrenheit para Celsius",s:"Ler uma temperatura em graus Fahrenheit e escrever o valor correspondente em graus Celsius.",i:"98.6",c:`algoritmo "Ex12"
+var
+   fahrenheit, celsius: real
+inicio
+   Escreva("Temperatura em Fahrenheit: ")
+   Leia(fahrenheit)
+   celsius <- (fahrenheit - 32) * 5 / 9
+   Escreval("Em Celsius: ", celsius:2)
+fimalgoritmo`},
+{t:"Ex. 17 — Média simples de duas avaliações",s:"Ler as notas da 1ª e 2ª avaliação, calcular a média simples e escrever se o aluno foi aprovado.",i:"6\n8",c:`algoritmo "Ex17"
+var
+   nota1, nota2, media: real
+inicio
+   Leia(nota1)
+   Leia(nota2)
+   media <- (nota1 + nota2) / 2
+   se media >= 5 entao
+      Escreval("Aluno APROVADO - media: ", media:2)
+   senao
+      Escreval("Aluno REPROVADO - media: ", media:2)
+   fimse
+fimalgoritmo`},
+{t:"Ex. 18 — Idade eleitoral",s:"Ler o ano atual e o ano de nascimento e informar se a pessoa poderá votar este ano (16 anos ou mais).",i:"2026\n2008",c:`algoritmo "Ex18"
+var
+   anoAtual, anoNascimento, idade: inteiro
+inicio
+   Leia(anoAtual)
+   Leia(anoNascimento)
+   idade <- anoAtual - anoNascimento
+   se idade >= 16 entao
+      Escreval("Podera votar este ano (idade: ", idade, ")")
+   senao
+      Escreval("Nao podera votar este ano (idade: ", idade, ")")
+   fimse
+fimalgoritmo`},
+{t:"Ex. 21 — Duração de um jogo de xadrez",s:"Ler a hora de início e a hora de fim (0 a 23) e calcular a duração em horas, considerando virada de dia.",i:"22\n3",c:`algoritmo "Ex21"
+var
+   horaInicio, horaFim, duracao: inteiro
+inicio
+   Escreva("Hora de inicio (0-23): ")
+   Leia(horaInicio)
+   Escreva("Hora de fim (0-23): ")
+   Leia(horaFim)
+   duracao <- horaFim - horaInicio
+   se duracao < 0 entao
+      duracao <- duracao + 24
+   fimse
+   Escreval("Duracao do jogo: ", duracao, " hora(s)")
+fimalgoritmo`},
+{t:"Ex. 24 — Comissão progressiva de vendedor",s:"Comissão de 3% sobre vendas até R$ 1.500,00 mais 5% sobre o que ultrapassar esse valor.",i:"1200\n2800",c:`algoritmo "Ex24"
+var
+   salarioFixo, vendas, comissao, salario: real
+inicio
+   Escreva("Salario salarioFixo: ")
+   Leia(salarioFixo)
+   Escreva("Valor das vendas: ")
+   Leia(vendas)
+   se vendas <= 1500 entao
+      comissao <- vendas * 0.03
+   senao
+      comissao <- 1500 * 0.03 + (vendas - 1500) * 0.05
+   fimse
+   salario <- salarioFixo + comissao
+   Escreval("Salario total: R$ ", salario:2)
+fimalgoritmo`},
+{t:"Ex. 26 — Necessidade de compra em estoque",s:"Ler quantidade atual, máxima e mínima; calcular a média e informar se deve efetuar compra.",i:"40\n100\n20",c:`algoritmo "Ex26"
+var
+   quantidadeAtual, quantidadeMaxima, quantidadeMinima, media: real
+inicio
+   Leia(quantidadeAtual)
+   Leia(quantidadeMaxima)
+   Leia(quantidadeMinima)
+   media <- (quantidadeMaxima + quantidadeMinima) / 2
+   Escreval("Quantidade media: ", media:2)
+   se quantidadeAtual < media entao
+      Escreval("E necessario efetuar compra.")
+   senao
+      Escreval("Nao e necessario comprar no momento.")
+   fimse
+fimalgoritmo`},
+{t:"Ex. 29 — Soma dos dois maiores valores",s:"Ler três valores e escrever a soma dos dois maiores (soma total menos o menor).",i:"8\n15\n3",c:`algoritmo "Ex29"
+var
+   valorA, valorB, valorC, menor, soma: real
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   Leia(valorC)
+   menor <- valorA
+   se valorB < menor entao
+      menor <- valorB
+   fimse
+   se valorC < menor entao
+      menor <- valorC
+   fimse
+   soma <- valorA + valorB + valorC - menor
+   Escreval("Soma dos dois maiores: ", soma)
+fimalgoritmo`},
+{t:"Ex. 34 — Teste de mesa de z = (x*y) + 5",s:"Calcular z para os valores de x e y informados, seguindo o algoritmo original.",i:"6\n4",c:`algoritmo "Ex34"
+var
+   x, y, z: real
+inicio
+   Leia(x)
+   Leia(y)
+   z <- (x * y) + 5
+   Escreval("Z = ", z)
+fimalgoritmo`},
+{t:"Ex. 35 — Venda de álcool e gasolina",s:"Ler o tipo de combustível e a quantidade de litros; aplicar desconto quando a compra atingir 20 litros ou mais.",i:"A\n25",c:`algoritmo "Ex35"
+var
+   tipo: caracter
+   litros, preco, total, desconto: real
+inicio
+   Escreva("Tipo (A-alcool / G-gasolina): ")
+   Leia(tipo)
+   Escreva("Litros: ")
+   Leia(litros)
+   se tipo = "A" entao
+      preco <- 3.50
+   senao
+      preco <- 5.20
+   fimse
+   total <- litros * preco
+   se litros >= 20 entao
+      se tipo = "A" entao
+         desconto <- total * 0.03
+      senao
+         desconto <- total * 0.04
+      fimse
+   senao
+      desconto <- 0
+   fimse
+   Escreval("Valor a pagar: R$ ", (total - desconto):2)
+fimalgoritmo`},
+{t:"Ex. 36 — Idades de dois homens e duas mulheres",s:"Somar a idade do homem mais velho com a mulher mais nova e multiplicar o homem mais novo pela mulher mais velha.",i:"45\n30\n50\n25",c:`algoritmo "Ex36"
+var
+   idadeHomem1, idadeHomem2, idadeMulher1, idadeMulher2, homemVelho, homemNovo, mulherVelha, mulherNova, soma, produto: real
+inicio
+   Leia(idadeHomem1)
+   Leia(idadeHomem2)
+   Leia(idadeMulher1)
+   Leia(idadeMulher2)
+   se idadeHomem1 > idadeHomem2 entao
+      homemVelho <- idadeHomem1
+      homemNovo <- idadeHomem2
+   senao
+      homemVelho <- idadeHomem2
+      homemNovo <- idadeHomem1
+   fimse
+   se idadeMulher1 > idadeMulher2 entao
+      mulherVelha <- idadeMulher1
+      mulherNova <- idadeMulher2
+   senao
+      mulherVelha <- idadeMulher2
+      mulherNova <- idadeMulher1
+   fimse
+   soma <- homemVelho + mulherNova
+   produto <- homemNovo * mulherVelha
+   Escreval("Soma (homem mais velho + mulher mais nova): ", soma)
+   Escreval("Produto (homem mais novo x mulher mais velha): ", produto)
+fimalgoritmo`},
+{t:"Ex. 37 — Venda de morangos e maçãs",s:"Ler o tipo de fruta e os quilos comprados, aplicando 10% de desconto para compras de 5 kg ou mais.",i:"M\n6",c:`algoritmo "Ex37"
+var
+   tipo: caracter
+   kg, preco, total: real
+inicio
+   Escreva("Tipo (M-morango / A-maca): ")
+   Leia(tipo)
+   Escreva("Quilos comprados: ")
+   Leia(kg)
+   se tipo = "M" entao
+      preco <- 6.00
+   senao
+      preco <- 4.00
+   fimse
+   total <- kg * preco
+   se kg >= 5 entao
+      total <- total - (total * 0.10)
+   fimse
+   Escreval("Valor a pagar: R$ ", total:2)
+fimalgoritmo`},
+{t:"Ex. 40 — Desconto conforme quantidade adquirida",s:"Ler nome, quantidade e preço unitário; aplicar desconto de 2%, 3% ou 5% conforme a quantidade.",i:"Kayque\n15\n10",c:`algoritmo "Ex40"
+var
+   nome: caracter
+   quantidade: inteiro
+   precoUnit, total, desconto: real
+inicio
+   Leia(nome)
+   Leia(quantidade)
+   Leia(precoUnit)
+   total <- quantidade * precoUnit
+   se quantidade < 10 entao
+      desconto <- total * 0.02
+   senao
+      se quantidade < 20 entao
+         desconto <- total * 0.03
+      senao
+         desconto <- total * 0.05
+      fimse
+   fimse
+   Escreval(nome, " - total: R$ ", total:2, "  desconto: R$ ", desconto:2, "  a pagar: R$ ", (total - desconto):2)
+fimalgoritmo`},
+{t:"Ex. 41 — Média de aproveitamento e conceito",s:"Calcular a média de aproveitamento com pesos e apresentar o conceito (A, B, C ou D).",i:"8\n7\n9\n6",c:`algoritmo "Ex41"
+var
+   nota1, nota2, nota3, mediaExercicios, media: real
+   conceito: caracter
+inicio
+   Leia(nota1)
+   Leia(nota2)
+   Leia(nota3)
+   Leia(mediaExercicios)
+   media <- (nota1 + nota2 * 2 + nota3 * 3 + mediaExercicios) / 7
+   se media >= 9 entao
+      conceito <- "A"
+   senao
+      se media >= 7 entao
+         conceito <- "B"
+      senao
+         se media >= 5 entao
+            conceito <- "C"
+         senao
+            conceito <- "D"
+         fimse
+      fimse
+   fimse
+   Escreval("Media de aproveitamento: ", media:2, "  Conceito: ", conceito)
+fimalgoritmo`},
+{t:"Ex. 42 — Tempo de trabalho e aposentadoria",s:"Ler ano atual, ano de nascimento e ano de ingresso; calcular idade e tempo de trabalho e verificar aposentadoria.",i:"2026\n1968\n1995",c:`algoritmo "Ex42"
+var
+   codigo, anoAtual, anoNascimento, anoIngresso, idade, tempoTrabalho: inteiro
+inicio
+   Leia(anoAtual)
+   Leia(anoNascimento)
+   Leia(anoIngresso)
+   idade <- anoAtual - anoNascimento
+   tempoTrabalho <- anoAtual - anoIngresso
+   Escreval("Idade: ", idade, " anos")
+   Escreval("Tempo de trabalho: ", tempoTrabalho, " anos")
+   se (idade >= 65) ou (tempoTrabalho >= 35) entao
+      Escreval("Requer aposentadoria.")
+   senao
+      Escreval("Nao requer aposentadoria ainda.")
+   fimse
+fimalgoritmo`},
+{t:"Ex. 44 — Divisão com REPITA (divisor ≠ 0)",s:"Ler dois valores; o segundo não pode ser zero. Imprimir a divisão usando REPITA.",i:"20\n0\n4",c:`algoritmo "Ex44"
+var
+   dividendo, divisor: real
+inicio
+   Leia(dividendo)
+   repita
+      Escreva("Informe o divisor (diferente de zero): ")
+      Leia(divisor)
+   ate divisor <> 0
+   Escreval(dividendo, " / ", divisor, " = ", dividendo / divisor:2)
+fimalgoritmo`},
+{t:"Ex. 45 — Divisão com ENQUANTO",s:"Reescrever o exercício da divisão utilizando a estrutura ENQUANTO em vez de REPITA.",i:"20\n0\n4",c:`algoritmo "Ex45"
+var
+   dividendo, divisor: real
+inicio
+   Leia(dividendo)
+   Escreva("Informe o divisor (diferente de zero): ")
+   Leia(divisor)
+   enquanto divisor = 0 faca
+      Escreva("Informe o divisor (diferente de zero): ")
+      Leia(divisor)
+   fimenquanto
+   Escreval(dividendo, " / ", divisor, " = ", dividendo / divisor:2)
+fimalgoritmo`},
+{t:"Ex. 46 — Divisão com REPITA e mensagem",s:"Acrescentar a mensagem 'VALOR INVÁLIDO' ao exercício da divisão (REPITA) caso o segundo valor seja zero.",i:"20\n0\n4",c:`algoritmo "Ex46"
+var
+   dividendo, divisor: real
+inicio
+   Leia(dividendo)
+   repita
+      Escreva("Informe o divisor: ")
+      Leia(divisor)
+      se divisor = 0 entao
+         Escreval("VALOR INVALIDO")
+      fimse
+   ate divisor <> 0
+   Escreval(dividendo, " / ", divisor, " = ", dividendo / divisor:2)
+fimalgoritmo`},
+{t:"Ex. 47 — Divisão com ENQUANTO e mensagem",s:"Acrescentar a mensagem 'VALOR INVÁLIDO' ao exercício da divisão (ENQUANTO) caso o segundo valor seja zero.",i:"20\n0\n4",c:`algoritmo "Ex47"
+var
+   dividendo, divisor: real
+inicio
+   Leia(dividendo)
+   Escreva("Informe o divisor: ")
+   Leia(divisor)
+   enquanto divisor = 0 faca
+      Escreval("VALOR INVALIDO")
+      Escreva("Informe o divisor: ")
+      Leia(divisor)
+   fimenquanto
+   Escreval(dividendo, " / ", divisor, " = ", dividendo / divisor:2)
+fimalgoritmo`},
+{t:"Ex. 48 — Média simples com validação (0 a 10)",s:"Ler as notas da 1ª e 2ª avaliação, aceitando apenas valores entre 0 e 10, e calcular a média.",i:"12\n8\n7\n6",c:`algoritmo "Ex48"
+var
+   nota1, nota2, media: real
+inicio
+   repita
+      Escreva("Nota 1 (0 a 10): ")
+      Leia(nota1)
+      se (nota1 < 0) ou (nota1 > 10) entao
+         Escreval("VALOR INVALIDO")
+      fimse
+   ate (nota1 >= 0) e (nota1 <= 10)
+   repita
+      Escreva("Nota 2 (0 a 10): ")
+      Leia(nota2)
+      se (nota2 < 0) ou (nota2 > 10) entao
+         Escreval("VALOR INVALIDO")
+      fimse
+   ate (nota2 >= 0) e (nota2 <= 10)
+   media <- (nota1 + nota2) / 2
+   Escreval("Media: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 49 — Novo cálculo (S/N)?",s:"Acrescentar ao cálculo da média simples a opção de refazer o cálculo enquanto a resposta for S.",i:"8\n6\nS\n9\n7\nN",c:`algoritmo "Ex49"
+var
+   nota1, nota2, media: real
+   novoCalculo: caracter
+inicio
+   novoCalculo <- "S"
+   enquanto novoCalculo = "S" faca
+      Escreva("Nota 1: ")
+      Leia(nota1)
+      Escreva("Nota 2: ")
+      Leia(nota2)
+      media <- (nota1 + nota2) / 2
+      Escreval("Media: ", media:2)
+      Escreva("NOVO CALCULO (S/N)? ")
+      Leia(novoCalculo)
+   fimenquanto
+fimalgoritmo`},
+{t:"Ex. 56 — Tabuada de um valor lido",s:"Ler um valor inteiro entre 1 e 10 e escrever a tabuada de 1 a 10 desse valor.",i:"9",c:`algoritmo "Ex56"
+var
+   numero, multiplicador: inteiro
+inicio
+   Escreva("Valor (1 a 10): ")
+   Leia(numero)
+   para multiplicador de 1 ate 10 passo 1 faca
+      Escreval(numero, " x ", multiplicador, " = ", numero * multiplicador)
+   fimpara
+fimalgoritmo`},
+{t:"Ex. 61 — Média aritmética de 10 valores",s:"Ler 10 valores e calcular e escrever a média aritmética.",i:"4\n8\n2\n9\n5\n7\n1\n6\n3\n10",c:`algoritmo "Ex61"
+var
+   contador: inteiro
+   valor, soma, media: real
+inicio
+   soma <- 0
+   para contador de 1 ate 10 passo 1 faca
+      Leia(valor)
+      soma <- soma + valor
+   fimpara
+   media <- soma / 10
+   Escreval("Media: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 62 — Média de uma turma",s:"Ler o número de alunos de uma turma e as respectivas notas, calculando a média aritmética.",i:"4\n7\n8\n5\n9",c:`algoritmo "Ex62"
+var
+   numeroAlunos, contador: inteiro
+   nota, soma, media: real
+inicio
+   Escreva("Numero de alunos: ")
+   Leia(numeroAlunos)
+   soma <- 0
+   para contador de 1 ate numeroAlunos passo 1 faca
+      Leia(nota)
+      soma <- soma + nota
+   fimpara
+   media <- soma / numeroAlunos
+   Escreval("Media da turma: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 63 — Soma total de 10 números",s:"Ler 10 números e ao final escrever a soma total.",i:"3\n6\n9\n1\n4\n7\n2\n5\n8\n10",c:`algoritmo "Ex63"
+var
+   contador: inteiro
+   numero, soma: real
+inicio
+   soma <- 0
+   para contador de 1 ate 10 passo 1 faca
+      Leia(numero)
+      soma <- soma + numero
+   fimpara
+   Escreval("Soma total: ", soma)
+fimalgoritmo`},
+{t:"Ex. 66 — Soma entre dois valores em qualquer ordem",s:"Ler dois valores, que podem estar em qualquer ordem, e somar todos os inteiros entre eles.",i:"9\n3",c:`algoritmo "Ex66"
+var
+   valorA, valorB, contador, aux, soma: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   se valorA > valorB entao
+      aux <- valorA
+      valorA <- valorB
+      valorB <- aux
+   fimse
+   soma <- 0
+   para contador de valorA ate valorB passo 1 faca
+      soma <- soma + contador
+   fimpara
+   Escreval("Soma de ", valorA, " ate ", valorB, " = ", soma)
+fimalgoritmo`},
+{t:"Ex. 68 — Valor total e média de mercadorias",s:"Ler a quantidade de mercadorias e o valor de cada uma; imprimir o valor total em estoque e a média.",i:"4\n120\n85\n200\n60",c:`algoritmo "Ex68"
+var
+   quantidade, contador: inteiro
+   valor, soma, media: real
+inicio
+   Escreva("Quantidade de mercadorias: ")
+   Leia(quantidade)
+   soma <- 0
+   para contador de 1 ate quantidade passo 1 faca
+      Leia(valor)
+      soma <- soma + valor
+   fimpara
+   media <- soma / quantidade
+   Escreval("Valor total em estoque: R$ ", soma:2)
+   Escreval("Media de valor.........: R$ ", media:2)
+fimalgoritmo`},
+{t:"Ex. 69 — Mercadorias sem quantidade prévia",s:"Ler o valor de cada mercadoria até a resposta 'N' para MAIS MERCADORIAS, imprimindo o total e a média.",i:"120\nS\n85\nS\n200\nN",c:`algoritmo "Ex69"
+var
+   quantidade: inteiro
+   valor, soma, media: real
+   resposta: caracter
+inicio
+   soma <- 0
+   quantidade <- 0
+   resposta <- "S"
+   enquanto resposta = "S" faca
+      Escreva("Valor da mercadoria: ")
+      Leia(valor)
+      soma <- soma + valor
+      quantidade <- quantidade + 1
+      Escreva("MAIS MERCADORIAS (S/N)? ")
+      Leia(resposta)
+   fimenquanto
+   media <- soma / quantidade
+   Escreval("Valor total: R$ ", soma:2)
+   Escreval("Media......: R$ ", media:2)
+fimalgoritmo`},
+{t:"Ex. 72 — Maior preço entre 15 produtos",s:"Ler código e preço de 15 produtos; calcular o maior preço e a média aritmética dos preços.",i:"1\n25\n2\n40\n3\n15\n4\n60\n5\n30\n6\n22\n7\n45\n8\n18\n9\n33\n10\n50\n11\n27\n12\n38\n13\n19\n14\n41\n15\n29",c:`algoritmo "Ex72"
+var
+   codigo, contador: inteiro
+   preco, maiorPreco, soma, media: real
+inicio
+   soma <- 0
+   para contador de 1 ate 15 passo 1 faca
+      Leia(codigo)
+      Leia(preco)
+      soma <- soma + preco
+      se (contador = 1) ou (preco > maiorPreco) entao
+         maiorPreco <- preco
+      fimse
+   fimpara
+   media <- soma / 15
+   Escreval("MaiorPreco preco: R$ ", maiorPreco:2)
+   Escreval("Media......: R$ ", media:2)
+fimalgoritmo`},
+{t:"Ex. 73 — Estatísticas de salário e filhos",s:"Coletar salário e número de filhos de n habitantes; escrever média de salário, média de filhos, maior salário e percentual com salário menor que R$ 150.",i:"4\n800\n2\n1200\n0\n130\n3\n2000\n1",c:`algoritmo "Ex73"
+var
+   numeroHabitantes, contador, filhos, somaFilhos, contadorMenor: inteiro
+   salario, somaSalarios, maiorSalario, mediaSalario, mediaFilhos, percentualMenor: real
+inicio
+   Escreva("Numero de habitantes: ")
+   Leia(numeroHabitantes)
+   somaSalarios <- 0
+   somaFilhos <- 0
+   contadorMenor <- 0
+   para contador de 1 ate numeroHabitantes passo 1 faca
+      Leia(salario)
+      Leia(filhos)
+      somaSalarios <- somaSalarios + salario
+      somaFilhos <- somaFilhos + filhos
+      se (contador = 1) ou (salario > maiorSalario) entao
+         maiorSalario <- salario
+      fimse
+      se salario < 150 entao
+         contadorMenor <- contadorMenor + 1
+      fimse
+   fimpara
+   mediaSalario <- somaSalarios / numeroHabitantes
+   mediaFilhos <- somaFilhos / numeroHabitantes
+   percentualMenor <- contadorMenor * 100 / numeroHabitantes
+   Escreval("Media de salario..: R$ ", mediaSalario:2)
+   Escreval("Media de filhos...: ", mediaFilhos:2)
+   Escreval("Maior salario.....: R$ ", maiorSalario:2)
+   Escreval("Percentual < R$150: ", percentualMenor:2, " %")
+fimalgoritmo`},
+{t:"Ex. 75 — Sequência triangular com repetição aninhada",s:"Imprimir a sequência de números de 1 até a linha atual, para cada linha de 1 a 10, usando repetição aninhada.",i:"",c:`algoritmo "Ex75"
+var
+   linha, coluna: inteiro
+inicio
+   para linha de 1 ate 10 passo 1 faca
+      para coluna de 1 ate linha passo 1 faca
+         Escreva(coluna, " ")
+      fimpara
+      Escreval("")
+   fimpara
+fimalgoritmo`},
+{t:"Ex. 55 — Tabuada do 8",s:"Calcular e imprimir a tabuada do 8, de 1 a 10.",i:"",c:`algoritmo "Ex55"
+var
+   multiplicador: inteiro
+inicio
+   para multiplicador de 1 ate 10 passo 1 faca
+      Escreval("8 x ", multiplicador, " = ", 8 * multiplicador)
+   fimpara
+fimalgoritmo`},
+{t:"Ex. 64 — Soma dos valores menores que 40",s:"Ler 10 números e somar apenas os que forem inferiores a 40.",i:"12\n55\n39\n80\n40\n7\n41\n22\n3\n60",c:`algoritmo "Ex64"
+var
+   contador, valor, soma: inteiro
+inicio
+   soma <- 0
+   para contador de 1 ate 10 passo 1 faca
+      Leia(valor)
+      se valor < 40 entao
+         soma <- soma + valor
+      fimse
+   fimpara
+   Escreval("Soma dos valores menores que 40: ", soma)
+fimalgoritmo`},
+{t:"Ex. 65 — Soma dos inteiros entre dois valores",s:"Ler dois valores e somar todos os inteiros entre eles, incluindo-os.",i:"3\n9",c:`algoritmo "Ex65"
+var
+   valorA, valorB, contador, soma: inteiro
+inicio
+   Leia(valorA)
+   Leia(valorB)
+   soma <- 0
+   para contador de valorA ate valorB passo 1 faca
+      soma <- soma + contador
+   fimpara
+   Escreval("Soma de ", valorA, " ate ", valorB, " = ", soma)
+fimalgoritmo`},
+{t:"Ex. 67 — Média dos inteiros entre 15 e 100",s:"Calcular e escrever a média aritmética dos inteiros de 15 a 100, inclusive.",i:"",c:`algoritmo "Ex67"
+var
+   numero, soma, quantidade: inteiro
+   media: real
+inicio
+   soma <- 0
+   quantidade <- 0
+   para numero de 15 ate 100 passo 1 faca
+      soma <- soma + numero
+      quantidade <- quantidade + 1
+   fimpara
+   media <- soma / quantidade
+   Escreval("Soma..: ", soma)
+   Escreval("Media.: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 71 — Maior valor e média",s:"Ler uma quantidade e depois essa quantidade de números; apresentar o maior e a média.",i:"5\n10\n42\n7\n31\n28",c:`algoritmo "Ex71"
+var
+   quantidade, contador: inteiro
+   valor, maior, soma, media: real
+inicio
+   Escreva("Quantidade de numeros: ")
+   Leia(quantidade)
+   soma <- 0
+   maior <- 0
+   para contador de 1 ate quantidade passo 1 faca
+      Leia(valor)
+      soma <- soma + valor
+      se (contador = 1) ou (valor > maior) entao
+         maior <- valor
+      fimse
+   fimpara
+   media <- soma / quantidade
+   Escreval("Maior numero: ", maior)
+   Escreval("Media.......: ", media:2)
+fimalgoritmo`},
+{t:"Ex. 74 — Tabuada de 1 a 10 (repetição aninhada)",s:"Imprimir a tabuada de 1 a 10 para cada número de 1 a 10.",i:"",c:`algoritmo "Ex74"
+var
+   numero, multiplicador: inteiro
+inicio
+   para numero de 1 ate 10 passo 1 faca
+      Escreval("--- Tabuada do ", numero, " ---")
+      para multiplicador de 1 ate 10 passo 1 faca
+         Escreval(numero, " x ", multiplicador, " = ", numero * multiplicador)
+      fimpara
+   fimpara
+fimalgoritmo`},
+{t:"Ex. 79 — Notas acima da média da turma",s:"Ler as notas de uma turma de 20 alunos, calcular a média da turma e contar quantos alunos ficaram acima da média (usa vetor).",i:"7\n8\n5\n9\n6\n7\n8\n4\n9\n10\n6\n7\n8\n5\n9\n7\n6\n8\n9\n10",c:`algoritmo "Ex79"
+var
+   notas: vetor[1..20] de real
+   contador, acima: inteiro
+   soma, media: real
+inicio
+   soma <- 0
+   para contador de 1 ate 20 passo 1 faca
+      Leia(notas[contador])
+      soma <- soma + notas[contador]
+   fimpara
+   media <- soma / 20
+   acima <- 0
+   para contador de 1 ate 20 passo 1 faca
+      se notas[contador] > media entao
+         acima <- acima + 1
+      fimse
+   fimpara
+   Escreval("Media da turma: ", media:2)
+   Escreval("Alunos acima da media: ", acima)
+fimalgoritmo`},
+{t:"Ex. 82 — Vetor multiplicado por X",s:"Ler um vetor A de 10 números e um valor X; armazenar em M o resultado de cada elemento de A multiplicado por X.",i:"2\n4\n6\n8\n10\n1\n3\n5\n7\n9\n3",c:`algoritmo "Ex82"
+var
+   valores, resultado: vetor[1..10] de real
+   fator: real
+   contador: inteiro
+inicio
+   para contador de 1 ate 10 passo 1 faca
+      Leia(valores[contador])
+   fimpara
+   Escreva("Valor de fator: ")
+   Leia(fator)
+   para contador de 1 ate 10 passo 1 faca
+      resultado[contador] <- valores[contador] * fator
+   fimpara
+   Escreval("Vetor resultado:")
+   para contador de 1 ate 10 passo 1 faca
+      Escreva(resultado[contador], " ")
+   fimpara
+   Escreval("")
+fimalgoritmo`},
+{t:"Ex. 84 — Soma de dois vetores",s:"Ler dois vetores A e B de tamanho N e armazenar em um terceiro vetor Soma a soma de cada posição correspondente.",i:"5\n1\n2\n3\n4\n5\n10\n20\n30\n40\n50",c:`algoritmo "Ex84"
+var
+   vetorA, vetorB, Soma: vetor[1..20] de real
+   tamanho, contador: inteiro
+inicio
+   Escreva("Tamanho dos vetores (tamanho): ")
+   Leia(tamanho)
+   para contador de 1 ate tamanho passo 1 faca
+      Leia(vetorA[contador])
+   fimpara
+   para contador de 1 ate tamanho passo 1 faca
+      Leia(vetorB[contador])
+   fimpara
+   para contador de 1 ate tamanho passo 1 faca
+      Soma[contador] <- vetorA[contador] + vetorB[contador]
+   fimpara
+   Escreval("Vetor Soma:")
+   para contador de 1 ate tamanho passo 1 faca
+      Escreva(Soma[contador], " ")
+   fimpara
+   Escreval("")
+fimalgoritmo`},
+{t:"Ex. 85 — Menor, maior, média anual e dias abaixo da média",s:"Ler a temperatura de todos os dias do ano (aqui, uma quantidade N informada pelo usuário) e calcular menor, maior, média e dias abaixo da média.",i:"7\n22\n25\n19\n30\n18\n24\n21",c:`algoritmo "Ex85"
+var
+   temperaturas: vetor[1..400] de real
+   totalDias, contador, diasAbaixo: inteiro
+   soma, media, menor, maior: real
+inicio
+   Escreva("Quantidade de dias a informar: ")
+   Leia(totalDias)
+   soma <- 0
+   para contador de 1 ate totalDias passo 1 faca
+      Leia(temperaturas[contador])
+      soma <- soma + temperaturas[contador]
+      se (contador = 1) ou (temperaturas[contador] > maior) entao
+         maior <- temperaturas[contador]
+      fimse
+      se (contador = 1) ou (temperaturas[contador] < menor) entao
+         menor <- temperaturas[contador]
+      fimse
+   fimpara
+   media <- soma / totalDias
+   diasAbaixo <- 0
+   para contador de 1 ate totalDias passo 1 faca
+      se temperaturas[contador] < media entao
+         diasAbaixo <- diasAbaixo + 1
+      fimse
+   fimpara
+   Escreval("Menor temperatura..: ", menor:2)
+   Escreval("Maior temperatura..: ", maior:2)
+   Escreval("Media anual........: ", media:2)
+   Escreval("Dias abaixo da media: ", diasAbaixo)
+fimalgoritmo`}]};
+/* ---------- UI ---------- */
+let sec='manzano',idx=0;
+const $=id=>document.getElementById(id);
+function setSec(s){sec=s;idx=0;$('tM').className=s==='manzano'?'on':'';$('tF').className=s==='faccat'?'on':'';render();}
+function grp(t){const p=t.split(/\s/)[0];return /^L0\d/.test(p)?"Lista "+p.slice(0,3):"Exercícios introdutórios";}
+function render(){const L=EX[sec];let h='',g='';
+ L.forEach((e,i)=>{if(sec==='manzano'){const G=grp(e.t);if(G!==g){g=G;h+=`<div class="grp">${G}</div>`;}}
+  h+=`<li data-i="${i}" onclick="load(${i})">${e.t}</li>`;});
+ $('list').innerHTML=h;load(idx);}
+function load(i){idx=i;const e=EX[sec][i];
+ $('src').textContent=sec==='manzano'?'Manzano · Estudo Dirigido de Algoritmos':'Faccat · Apostila de Lógica de Programação';
+ $('ttl').textContent=e.t;$('stm').textContent=e.s;$('code').value=e.c;$('stdin').value=e.i;$('out').textContent='—';
+ document.querySelectorAll('#list li').forEach(li=>li.className=(+li.dataset.i===i)?'on':'');}
+function go(d){const L=EX[sec];idx=(idx+d+L.length)%L.length;load(idx);}
+function exec(){try{const r=portugol($('code').value,$('stdin').value);$('out').textContent=r.trim()===''?'(sem saída)':r;}
+ catch(err){$('out').textContent='⚠ Erro: '+err;}}
+EX.manzano.sort((a,b)=>a.t.localeCompare(b.t,'pt'));
+EX.faccat.sort((a,b)=>parseInt(a.t.match(/\d+/)[0])-parseInt(b.t.match(/\d+/)[0]));
+render();
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='Enter')exec();});
+</script></body></html>
